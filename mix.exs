@@ -20,7 +20,7 @@ defmodule DynamoMigration.MixProject do
   defp deps do
     [
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:ex_aws_dynamo, "~> 3.0"},
+      {:ex_aws_dynamo, ">= 3.0.0"},
       {:hackney, ">= 0.0.0"},
       {:jason, ">= 0.0.0"},
       {:r_enum, "~> 0.7"}

@@ -35,6 +35,17 @@ defmodule Mix.Tasks.Dynamo.Gen.Migration do
   embed_template(:migration, """
   defmodule <%= inspect @mod %> do
     def change do
+      # ## You can freely write operations related to DynamoDB.
+      # ### Examples.
+      # ExAws.Dynamo.create_table(
+      #   "Tests",
+      #   [id: :hash],
+      #   %{id: :number},
+      #   1,
+      #   1,
+      #   :provisioned
+      # )
+      # |> ExAws.request!()
     end
   end
   """)
