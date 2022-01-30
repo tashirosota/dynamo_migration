@@ -30,7 +30,7 @@ defmodule DynamoMigrationTest do
   end
 
   test "setup" do
-    DynamoMigration.setup() == :ok
+    assert DynamoMigration.setup() == :ok
   end
 
   test "migration_file_path" do
