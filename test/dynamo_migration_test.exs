@@ -22,7 +22,7 @@ defmodule DynamoMigrationTest do
   end
 
   describe "migration" do
-    test "migration_required? && migrate?", state do
+    test "migration_required? && migrate", state do
       assert DynamoMigration.migration_required?(state[:version]) == true
       assert DynamoMigration.migrate() == :ok
       assert DynamoMigration.migration_required?(state[:version]) == false

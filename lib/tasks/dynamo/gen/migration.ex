@@ -5,6 +5,7 @@ defmodule Mix.Tasks.Dynamo.Gen.Migration do
 
   @shortdoc "Generates a new migration for DynamoDB"
 
+  @spec run([String.t()]) :: integer()
   def run(args) do
     migrations_path = DynamoMigration.migration_file_path()
     name = args |> REnum.first()
