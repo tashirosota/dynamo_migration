@@ -9,7 +9,8 @@ defmodule DynamoMigration do
     |> compile_migrations()
     |> REnum.each(fn {mod, version} ->
       if migration_required?(version) do
-        mod.change() && insert_migration_version(version)
+        mod.change()
+        insert_migration_version(version)
         Logger.debug("Migrate #{mod} was succeed")
       end
     end)
@@ -46,6 +47,8 @@ defmodule DynamoMigration do
 
       Logger.debug("Migrations table was created.")
     end
+
+    :ok
   end
 
   def migration_file_path do

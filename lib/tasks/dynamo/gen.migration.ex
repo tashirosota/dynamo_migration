@@ -9,7 +9,8 @@ defmodule Mix.Tasks.Dynamo.Gen.Migration do
     migrations_path = DynamoMigration.migration_file_path()
     name = args |> REnum.first()
     base_name = "#{underscore(name)}.exs"
-    file = Path.join(migrations_path, "#{timestamp()}_#{base_name}")
+    current_timestamp = timestamp()
+    file = Path.join(migrations_path, "#{current_timestamp}_#{base_name}")
     unless File.dir?(migrations_path), do: create_directory(migrations_path)
     fuzzy_path = Path.join(migrations_path, "*_#{base_name}")
 
@@ -21,7 +22,7 @@ defmodule Mix.Tasks.Dynamo.Gen.Migration do
 
     assigns = [mod: Module.concat([Dynamo, Migrations, camelize(name)])]
     create_file(file, migration_template(assigns))
-    file
+    current_timestamp |> String.to_integer()
   end
 
   defp timestamp do
