@@ -8,24 +8,31 @@ defmodule DynamoMigrationTest do
 
   setup do
     Process.sleep(1000)
-    length = 5
+    table_name = random_prefix() <> "tests"
 
-    random =
-      :crypto.strong_rand_bytes(length)
-      |> Base.encode64()
-      |> binary_part(0, length)
-      |> String.replace("/", "")
-      |> String.replace(~r/[0-9]/, "")
+    version =
+      Mix.Tasks.Dynamo.Gen.Migration.run([
+        "create_#{table_name}_table",
+        "-t",
+        table_name,
+        "--change",
+        change(table_name)
+      ])
 
-    version = Mix.Tasks.Dynamo.Gen.Migration.run([random <> "create_tests_table"])
     {:ok, version: version}
   end
 
+  describe "reset/1" do
+    test ":ok" do
+      assert :ok = DynamoMigration.reset()
+    end
+  end
+
   describe "migration" do
-    test "migration_required? && migrate", state do
-      assert DynamoMigration.migration_required?(state[:version]) == true
-      assert DynamoMigration.migrate() == :ok
-      assert DynamoMigration.migration_required?(state[:version]) == false
+    test "migration_required? && migrate", %{version: version} do
+      assert DynamoMigration.migration_required?(version)
+      assert :ok = DynamoMigration.migrate()
+      refute DynamoMigration.migration_required?(version)
     end
   end
 
@@ -35,5 +42,30 @@ defmodule DynamoMigrationTest do
 
   test "migration_file_path" do
     assert DynamoMigration.migration_file_path() == "priv/dynamo/migrations"
+  end
+
+  defp random_prefix() do
+    length = 5
+
+    :crypto.strong_rand_bytes(length)
+    |> Base.encode64()
+    |> binary_part(0, length)
+    |> String.replace("/", "")
+    |> String.replace("+", "")
+    |> String.replace(~r/[0-9]/, "")
+  end
+
+  defp change(table_name) do
+    """
+        ExAws.Dynamo.create_table(
+          "#{table_name}",
+          [id: :hash],
+          %{id: :number},
+          1,
+          1,
+          :provisioned
+        )
+        |> ExAws.request!()
+    """
   end
 end
