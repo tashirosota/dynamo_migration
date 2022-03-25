@@ -29,7 +29,7 @@ end
 
 ## Usage
 
-### 1. Creates migrations table.
+### 1. dynamo.setup
 
 First of all, you need to create a migration table for version management.
 Type this in your console.
@@ -38,13 +38,18 @@ Type this in your console.
 $ mix dynamo.setup
 ```
 
-### 2. Generates and rewrite migration file.
+### 2. dynamo.gen.migration
 
 Then create a file for management and add your changes.
 
 ```sh
 $ mix dynamo.gen.migration create_tests_table --table tests -e
 ```
+
+| option       | alias | type    | effect                                               |
+| ------------ | ----- | ------- | ---------------------------------------------------- |
+| --table      | -t    | string  | table name for management ★ Required.                |
+| --env_prefix | -e    | boolean | Mix.env () is added to the prefix of the table name. |
 
 ```elixir
 # priv/dynamo/migrations/20220130083004_create_tests_table.exs
@@ -67,7 +72,7 @@ defmodule Dynamo.Migrations.CreateTestsTable do
 end
 ```
 
-### 3. Migrates.
+### 3. dynamo.migrate
 
 You can run the migration file.
 And it's managed by a version table so it won't be duplicated.
@@ -76,23 +81,13 @@ It is also useful as an operation history for DynamoDB.
 ```bash
 # Executes `priv/dynamo/migrations/*` if there had not migrated.
 $ mix dynamo.migrate
+
 ```
 
-### 4. Resets.
+### 4. dynamo.reset
 
 In a test environment, you would like to reset migration every time I run it.
 You can use `mix dynamo.reset`.
-
-## Command options
-
-### mix dynamo.gen.migration
-
-| option       | alias | type    | effect                                               |
-| ------------ | ----- | ------- | ---------------------------------------------------- |
-| --table      | -t    | string  | table name for management ★ Required.                |
-| --env_prefix | -e    | boolean | Mix.env () is added to the prefix of the table name. |
-
-### mix dynamo.reset
 
 | option       | alias | type    | effect                                                                                                                                    |
 | ------------ | ----- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
