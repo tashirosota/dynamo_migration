@@ -5,9 +5,13 @@ defmodule DynamoMigration do
   See also https://github.com/ex-aws/ex_aws_dynamo.
   Usage:
     1. $ mix dynamo.setup # Creates migrations table.
-    2. $ mix dynamo.gen.migration create_tests_table # Generates migration file.
+    2. $ mix dynamo.gen.migration create_tests_table --table Tests # Generates migration file.
     ```elixir
     defmodule Dynamo.Migrations.CreateTestsTable do
+      @table_name "Tests"
+
+      def table_name, do: @table_name
+
       def change do
         # Rewrite any migration code.
         ExAws.Dynamo.create_table(
@@ -26,40 +30,33 @@ defmodule DynamoMigration do
   """
   require Logger
   alias ExAws.Dynamo
-  @table "Migrations"
+  @table "migrations"
   @migration_file_path "priv/dynamo/migrations"
+
+  @doc false
+  @spec migration_file_path :: String.t()
+  def migration_file_path, do: @migration_file_path
+
   @doc """
   Called from `mix dynamo.migrate`
   Executes migration files if there had not migrated.
   """
   @spec migrate :: :ok
   def migrate do
-    migration_files!()
-    |> compile_migrations()
-    |> REnum.each(fn {mod, version} ->
-      if migration_required?(version) do
-        mod.change()
-        insert_migration_version(version)
-        Logger.debug("Migrate #{mod} was succeed")
-      end
-    end)
-  end
+    case File.ls(migration_file_path()) do
+      {:ok, files} ->
+        files
+        |> compile_migrations()
+        |> Enum.filter(fn {_, version} -> migration_required?(version) end)
+        |> Enum.each(fn {mod, version} ->
+          mod.change()
+          insert_migration_version(mod.table_name(), version)
+          Logger.debug("Migrate #{mod} was succeed")
+        end)
 
-  @doc """
-  Returns true if migration version does not exists in migrations table.
-  """
-  @spec migration_required?(integer()) :: boolean
-  def migration_required?(version) do
-    result =
-      Dynamo.query(
-        @table,
-        limit: 1,
-        expression_attribute_values: [version: version],
-        key_condition_expression: "version = :version"
-      )
-      |> ExAws.request!()
-
-    RMap.get(result, "Count") == 0
+      error ->
+        error
+    end
   end
 
   @doc """
@@ -68,9 +65,7 @@ defmodule DynamoMigration do
   """
   @spec setup :: :ok
   def setup do
-    tables = Dynamo.list_tables() |> ExAws.request!() |> RMap.get("TableNames")
-
-    if @table in tables do
+    if @table in table_names() do
       Logger.debug("Migrations table was already created.")
     else
       Dynamo.create_table(
@@ -85,45 +80,90 @@ defmodule DynamoMigration do
 
       Logger.debug("Migrations table was created.")
     end
-
-    :ok
   end
 
-  @spec migration_file_path :: String.t()
-  def migration_file_path do
-    @migration_file_path
+  @doc """
+  Reset table migrations.
+  """
+  def reset(only_prefix \\ nil) do
+    IO.inspect(only_prefix)
+    current_versions = versions()
+
+    table_names()
+    |> Enum.reject(&(&1 == @table))
+    |> Enum.filter(fn table_name ->
+      unless only_prefix do
+        true
+      else
+        table_name =~ Regex.compile!("\A#{table_name}")
+      end
+    end)
+    |> Enum.each(&delete_table(&1, current_versions))
+
+    migrate()
   end
 
-  defp insert_migration_version(version) do
+  @doc false
+  @spec migration_required?(binary()) :: boolean
+  def migration_required?(version) do
+    Dynamo.get_item(@table, %{version: version})
+    |> ExAws.request!()
+    |> (fn result -> result == %{} end).()
+  end
+
+  defp versions() do
+    Dynamo.scan(@table)
+    |> ExAws.request!()
+    |> Map.get("Items", [])
+    |> Enum.map(fn version ->
+      %{
+        version: version["version"]["N"] |> String.to_integer(),
+        table_name: version["table_name"]["S"]
+      }
+    end)
+  end
+
+  defp insert_migration_version(table_name, version) do
     Dynamo.put_item(
       @table,
-      %{version: version}
+      %{table_name: table_name, version: version}
     )
     |> ExAws.request!()
-  end
-
-  defp migration_files!() do
-    case File.ls(migration_file_path()) do
-      {:ok, files} -> files
-      {:error, _} -> raise "test"
-    end
   end
 
   defp compile_migrations(files) do
     files
     |> Enum.map(fn file ->
-      mod =
+      [mod | _] =
         (migration_file_path() <> "/" <> file)
         |> Code.compile_file()
-        |> REnum.map(&elem(&1, 0))
-        |> REnum.first()
+        |> Enum.map(&elem(&1, 0))
 
       version =
         Regex.scan(~r/[0-9]/, file)
-        |> REnum.join()
+        |> Enum.join()
         |> String.to_integer()
 
       {mod, version}
     end)
+  end
+
+  defp delete_table(table_name, versions) do
+    table_name
+    |> Dynamo.delete_table()
+    |> ExAws.request!()
+
+    versions
+    |> Enum.filter(&(table_name == &1[:table_name]))
+    |> Enum.each(fn version ->
+      Dynamo.delete_item(@table, %{version: version[:version]})
+      |> ExAws.request!()
+    end)
+  end
+
+  defp table_names do
+    Dynamo.list_tables()
+    |> ExAws.request!()
+    |> Map.get("TableNames", [])
   end
 end
