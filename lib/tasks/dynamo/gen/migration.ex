@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Dynamo.Gen.Migration do
             # ## You can freely write operations related to DynamoDB.
             # ### Examples.
             # ExAws.Dynamo.create_table(
-            #   "Tests", # You may type `Mix.env <> "table_name"` if want to use it properly want by environment.
+            #   "Tests", # You may type `Mix.env() <> "table_name"` if want to use it properly want by environment.
             #   [id: :hash],
             #   %{id: :number},
             #   1,

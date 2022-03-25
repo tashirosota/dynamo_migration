@@ -5,9 +5,13 @@ defmodule DynamoMigration do
   See also https://github.com/ex-aws/ex_aws_dynamo.
   Usage:
     1. $ mix dynamo.setup # Creates migrations table.
-    2. $ mix dynamo.gen.migration create_tests_table # Generates migration file.
+    2. $ mix dynamo.gen.migration create_tests_table --table Tests # Generates migration file.
     ```elixir
     defmodule Dynamo.Migrations.CreateTestsTable do
+      @table_name "Tests"
+
+      def table_name, do: @table_name
+
       def change do
         # Rewrite any migration code.
         ExAws.Dynamo.create_table(
@@ -82,6 +86,7 @@ defmodule DynamoMigration do
   Reset table migrations.
   """
   def reset(only_prefix \\ nil) do
+    IO.inspect(only_prefix)
     current_versions = versions()
 
     table_names()
