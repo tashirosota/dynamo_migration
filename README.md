@@ -63,7 +63,7 @@ defmodule Dynamo.Migrations.CreateTestsTable do
       "Tests",
       [id: :hash],
       %{id: :number},
-      1,Create migrations tabl
+      1,
       1,
       :provisioned
     )
